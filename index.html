@@ -43,13 +43,16 @@ hr{border:0; border-top:1px solid var(--line); margin:2.4em 0}
 strong{font-weight:700}
 ul,ol{padding-left:1.5em}
 li{margin:.3em 0}
-.toc{background:var(--box); border:1px solid var(--line); border-radius:10px;
+.tocwrap{background:var(--box); border:1px solid var(--line); border-radius:10px;
      padding:16px 20px 16px 20px; margin:26px 0 34px; font-size:14.5px}
-.toc>ul{padding-left:1.1em; margin:.3em 0}
-.toc ul ul{padding-left:1.2em}
-.toc li{margin:.18em 0}
-.toc::before{content:"目錄"; display:block; font-weight:700; margin-bottom:.5em; color:var(--muted);
+.tocwrap ul{padding-left:1.1em; margin:.3em 0}
+.tocwrap>ul{padding-left:1.1em}
+.tocwrap ul ul{padding-left:1.2em}
+.tocwrap li{margin:.18em 0}
+.tocwrap::before{content:"目錄"; display:block; font-weight:700; margin-bottom:.5em; color:var(--muted);
              font-size:.82em; letter-spacing:.12em}
+.tocwrap>.toc{background:none; border:0; padding:0; margin:0}
+.tocwrap>.toc::before{content:none}
 footer{margin-top:64px; padding-top:20px; border-top:1px solid var(--line);
        color:var(--muted); font-size:13.5px}
 @media (max-width:640px){
@@ -61,7 +64,7 @@ footer{margin-top:64px; padding-top:20px; border-top:1px solid var(--line);
 </head>
 <body>
 <div class="wrap">
-<nav class="toc"><div class="toc">
+<nav class="tocwrap"><div class="toc">
 <ul>
 <li><a href="#android">為一支不被官方支援的手機，打造一套自己的 Android 系統</a></li>
 <li><a href="#0">0. 三十秒讀懂這個專案</a></li>
