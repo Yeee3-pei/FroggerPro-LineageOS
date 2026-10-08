@@ -1,0 +1,1429 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>從編譯到開機 ｜ FroggerPro — 為一支不被官方支援的手機，打造一套自己的 Android 系統</title>
+<meta name="description" content="Nothing Phone (4a) Pro 自建 LineageOS 23.2 的完整開發時間軸：92 天、14,013 行紀錄、兩次變磚救援、兩個根因級發現。">
+<style>
+:root{
+  --bg:#ffffff; --fg:#1f2328; --muted:#59636e; --line:#d8dee4;
+  --accent:#2f6feb; --code-bg:#f6f8fa; --box:#f6f8fa;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#0d1117; --fg:#e6edf3; --muted:#9198a1; --line:#30363d;
+         --accent:#6cb6ff; --code-bg:#161b22; --box:#161b22; }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--bg); color:var(--fg);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC","PingFang TC",
+              "Microsoft JhengHei","Hiragino Sans",sans-serif;
+  font-size:16px; line-height:1.75; letter-spacing:.01em;
+}
+.wrap{max-width:880px; margin:0 auto; padding:48px 22px 96px}
+table{width:100%; border-collapse:collapse; margin:18px 0; font-size:14.5px; display:block; overflow-x:auto}
+th,td{border:1px solid var(--line); padding:8px 11px; text-align:left; vertical-align:top}
+th{background:var(--box); font-weight:600; white-space:nowrap}
+h1{font-size:1.9rem; line-height:1.35; margin:0 0 .6em; padding-bottom:.4em; border-bottom:2px solid var(--line)}
+h2{font-size:1.4rem; margin:2.2em 0 .6em; padding-top:.4em; border-top:1px solid var(--line)}
+h3{font-size:1.15rem; margin:1.7em 0 .5em}
+h4{font-size:1rem; margin:1.4em 0 .4em; color:var(--muted)}
+a{color:var(--accent); text-decoration:none}
+a:hover{text-decoration:underline}
+code{background:var(--code-bg); padding:.15em .4em; border-radius:5px;
+     font-family:ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace; font-size:.88em}
+pre{background:var(--code-bg); padding:14px 16px; border-radius:8px; overflow-x:auto; border:1px solid var(--line)}
+pre code{background:none; padding:0; font-size:.85em}
+blockquote{margin:18px 0; padding:10px 16px; border-left:4px solid var(--accent);
+           background:var(--box); border-radius:0 6px 6px 0; color:var(--fg)}
+blockquote p{margin:.4em 0}
+hr{border:0; border-top:1px solid var(--line); margin:2.4em 0}
+strong{font-weight:700}
+ul,ol{padding-left:1.5em}
+li{margin:.3em 0}
+.toc{background:var(--box); border:1px solid var(--line); border-radius:10px;
+     padding:16px 20px 16px 20px; margin:26px 0 34px; font-size:14.5px}
+.toc>ul{padding-left:1.1em; margin:.3em 0}
+.toc ul ul{padding-left:1.2em}
+.toc li{margin:.18em 0}
+.toc::before{content:"目錄"; display:block; font-weight:700; margin-bottom:.5em; color:var(--muted);
+             font-size:.82em; letter-spacing:.12em}
+footer{margin-top:64px; padding-top:20px; border-top:1px solid var(--line);
+       color:var(--muted); font-size:13.5px}
+@media (max-width:640px){
+  body{font-size:15px} .wrap{padding:28px 16px 72px}
+  h1{font-size:1.5rem} h2{font-size:1.2rem}
+  table{font-size:13.5px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav class="toc"><div class="toc">
+<ul>
+<li><a href="#android">為一支不被官方支援的手機，打造一套自己的 Android 系統</a></li>
+<li><a href="#0">0. 三十秒讀懂這個專案</a></li>
+<li><a href="#1">1. 名詞解釋（先讀這一節，後面才看得懂）</a></li>
+<li><a href="#2">2. 背景：這個專案面對什麼問題</a><ul>
+<li><a href="#21-vs">2.1 手機廠的系統 vs. 使用者的選擇權</a></li>
+<li><a href="#22">2.2 開源系統的支援是「一台一台做」的</a></li>
+<li><a href="#23">2.3 真正的難點在哪裡</a></li>
+</ul>
+</li>
+<li><a href="#3-2026-07-08-2026-10-08">3. 完整時間軸（2026-07-08 → 2026-10-08）</a><ul>
+<li><a href="#0_1">第 0 期｜前置條件（本專案開始之前）</a></li>
+<li><a href="#1-2026-07-08-07-22">第 1 期｜起步：從「連環境都沒有」到能建置（2026-07-08 ~ 07-22）</a><ul>
+<li><a href="#11">1.1 起點：最基本的問題</a></li>
+<li><a href="#12-2026-07-16">1.2 環境與素材（2026-07-16 紀錄）</a></li>
+<li><a href="#13-rom">1.3 反組譯另一個 ROM 以取得關鍵設定</a></li>
+<li><a href="#14-8-46-2026-07-19">1.4 第一次完整建置：8 小時 46 分（2026-07-19 紀錄）</a></li>
+<li><a href="#15-14-2026-07-19">1.5 一次代價 14 小時的錯誤（2026-07-19）</a></li>
+<li><a href="#16-2026-07-20">1.6 政策編譯的神祕失敗（2026-07-20 分析）</a></li>
+<li><a href="#17-2026-07-22">1.7 建置系統崩潰（2026-07-22 紀錄）</a></li>
+</ul>
+</li>
+<li><a href="#2-2026-07-22-08-19">第 2 期｜核心編譯、首次完整成功，與變磚救援（2026-07-22 ~ 08-19）</a><ul>
+<li><a href="#21-5-2026-07-26">2.1 核心編譯：腳本連續失敗 5 版（2026-07-26 紀錄）</a></li>
+<li><a href="#22-11-2026-07-26">2.2 這階段共踩過的 11 個錯誤（專案自行整理的清單，2026-07-26）</a></li>
+<li><a href="#23-2026-07-28">2.3 建置系統的模組重複問題（2026-07-28）</a></li>
+<li><a href="#24">2.4 模組宣告與驅動設定</a></li>
+<li><a href="#25-wipe-super-2026-08-07">2.5 ★手機第一次變磚：wipe-super 事故（2026-08-07 紀錄）</a></li>
+<li><a href="#26-2026-08-25">2.6 ★手機第二次變磚：開機映像過大事故（2026-08-25）</a></li>
+<li><a href="#27-2026-08-0908-13">2.7 建置成功（2026-08-09、08-13，多次）</a></li>
+<li><a href="#28-2026-08-19-09-08">2.8 停滯期（2026-08-19 ~ 09-08）</a></li>
+</ul>
+</li>
+<li><a href="#3-2026-09-09-09-16">第 3 期｜核心重編與開機映像測試（2026-09-09 ~ 09-16）</a><ul>
+<li><a href="#31">3.1 接續：核心編譯的符號缺失問題</a></li>
+<li><a href="#32-2026-09-09-09-17">3.2 檔案傳遞的枝節問題（2026-09-09 ~ 09-17）</a></li>
+<li><a href="#33-2026-09-16">3.3 用「只換核心」的方式驗證（2026-09-16）</a></li>
+</ul>
+</li>
+<li><a href="#4-2026-09-16-09-21">第 4 期｜核心標頭檔大戰與交棒（2026-09-16 ~ 09-21）</a><ul>
+<li><a href="#41">4.1 問題現象</a></li>
+<li><a href="#42-6">4.2 真因追查鏈（共 6 個層次）</a></li>
+<li><a href="#43-2026-09-21-0115">4.3 最終處置（2026-09-21 01:15）</a></li>
+<li><a href="#44-2026-09-21">4.4 交棒（2026-09-21）</a></li>
+</ul>
+</li>
+<li><a href="#5-2026-09-21-09-28">第 5 期｜分區管理器時期：大量實驗（2026-09-21 ~ 09-28）</a></li>
+<li><a href="#6-2026-09-28-10-01">第 6 期｜讓手機真的開起來（2026-09-28 ~ 10-01）</a></li>
+<li><a href="#7-2026-10-02-10-05">第 7 期｜可刷入、可簽章、可更新、硬體逐一打通（2026-10-02 ~ 10-05）</a></li>
+<li><a href="#8-2026-10-05-10-08">第 8 期｜隱私強化與安全性更新（2026-10-05 ~ 10-08）</a><ul>
+<li><a href="#81-app">8.1 自建隱私控制 App</a></li>
+<li><a href="#82-selinux">8.2 SELinux 安全政策（本專案自行維護）</a></li>
+<li><a href="#83">8.3 安全性更新與第二版建置</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#4">4. 成果與量測數字</a></li>
+<li><a href="#5">5. 四個關鍵技術轉折點</a></li>
+<li><a href="#6">6. 誠實歸屬表</a></li>
+<li><a href="#7">7. 待補與未證實事項（誠實標記）</a></li>
+<li><a href="#_1">附錄：證據索引</a></li>
+</ul>
+</div>
+</nav>
+<h1 id="android">為一支不被官方支援的手機，打造一套自己的 Android 系統</h1>
+<p><strong>專案代號</strong>：FroggerPro
+<strong>裝置</strong>：Nothing Phone (4a) Pro（Qualcomm SM7750 晶片）
+<strong>系統</strong>：LineageOS 23.2（Android 16 世代）
+<strong>期間</strong>：2026-07-08 → 2026-10-08（約 92 天）
+<strong>文件產出日</strong>：2026-10-09（第 3 版：完整時間軸，細節全收）</p>
+<blockquote>
+<p>本文件寫給<strong>第一次接觸這個專案的人</strong>。
+所有專有名詞都在第 1 節解釋，<strong>不需要任何 Android 開發背景</strong>也能讀懂。
+每項敘述都附出處（見附錄）。<strong>凡未經查證者一律標明</strong>。</p>
+</blockquote>
+<hr />
+<h1 id="0">0. 三十秒讀懂這個專案</h1>
+<p><strong>手機出廠時裝的那套作業系統，是手機廠寫好、使用者只能接受的。</strong>
+本專案的目標，是<strong>自己從原始碼編出一整套系統，裝到手機上並讓它正常運作</strong>。</p>
+<p>這台 Nothing Phone (4a) Pro 有兩個特殊之處：</p>
+<ol>
+<li><strong>官方 LineageOS 不支援它</strong> ⇒ 沒有「照著官方文件做就會成功」的路徑 ⇒ 屬於非官方（UNOFFICIAL）版本</li>
+<li><strong>「編譯成功」與「手機真的能開機」之間隔著大量未解問題</strong> ⇒ 這是本專案真正的工作所在</li>
+</ol>
+<p><strong>成果</strong>：約 92 天內，從「連開發環境都還沒有」推進到「手機真的開機、能刷入、能安全簽章、能線上更新」，並進一步做出<strong>隱私強化版本</strong>與<strong>安全性更新版本</strong>。</p>
+<hr />
+<h1 id="1">1. 名詞解釋（先讀這一節，後面才看得懂）</h1>
+<table>
+<thead>
+<tr>
+<th>名詞</th>
+<th>白話解釋</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>AOSP</strong></td>
+<td>Android Open Source Project。Google 釋出的 Android 原始碼基礎，任何人皆可下載修改。</td>
+</tr>
+<tr>
+<td><strong>LineageOS</strong></td>
+<td>社群維護的開源 Android 發行版，基於 AOSP。</td>
+</tr>
+<tr>
+<td><strong>ROM</strong></td>
+<td>一套完整的手機系統映像檔（俗稱「刷機包」）。</td>
+</tr>
+<tr>
+<td><strong>刷機（flash）</strong></td>
+<td>把 ROM 寫進手機的動作。寫錯可能導致手機無法開機。</td>
+</tr>
+<tr>
+<td><strong>Device Tree（裝置設定樹）</strong></td>
+<td>一個資料夾，描述「這台手機的硬體長什麼樣」：螢幕解析度、按鍵、相機、分區大小、驅動對應。<strong>機型專屬，不能沿用別台手機的</strong>。</td>
+</tr>
+<tr>
+<td><strong>Kernel（核心）</strong></td>
+<td>作業系統最底層，直接與硬體溝通。手機廠依法律要求必須公開其原始碼。</td>
+</tr>
+<tr>
+<td><strong>Vendor Blobs（原廠二進位檔）</strong></td>
+<td>手機廠不公開原始碼的驅動程式，只能從原廠 ROM 中取出重複使用。</td>
+</tr>
+<tr>
+<td><strong>HAL（硬體抽象層）</strong></td>
+<td>Android 與硬體之間的介面層。例如「相機 HAL」讓上層程式能操作相機。</td>
+</tr>
+<tr>
+<td><strong>VINTF</strong></td>
+<td>Android 的「介面清單」機制。開機時系統會核對硬體該提供的功能是否全部到位。<strong>清單不全，對應功能就起不來</strong>。</td>
+</tr>
+<tr>
+<td><strong>SELinux</strong></td>
+<td>Linux 的強制安全機制，規定「哪個程式可以碰哪些資源」，<strong>預設全部禁止</strong>，需逐項開放。</td>
+</tr>
+<tr>
+<td><strong>AVC 拒絕紀錄</strong></td>
+<td>SELinux 擋下某動作時留下的紀錄。<strong>此類紀錄越少，代表系統設定越正確</strong>。</td>
+</tr>
+<tr>
+<td><strong>sepolicy（安全政策）</strong></td>
+<td>描述 SELinux 規則的檔案。寫錯會使功能失效；亂開放會降低安全性。</td>
+</tr>
+<tr>
+<td><strong>genfscon 規則</strong></td>
+<td>安全政策中「某個檔案系統路徑對應哪個標籤」的宣告。<strong>同一路徑宣告兩次會被政策編譯器拒絕</strong>。</td>
+</tr>
+<tr>
+<td><strong>super 分區 / 動態分區</strong></td>
+<td>現代 Android 將系統切成多個邏輯分區，共同放在名為 <code>super</code> 的容器裡。<strong>容器切法不對就刷不進去</strong>。</td>
+</tr>
+<tr>
+<td><strong>A/B 雙槽</strong></td>
+<td>手機有兩份系統（a 槽、b 槽）。更新時寫入另一槽，失敗仍可退回。</td>
+</tr>
+<tr>
+<td><strong>AVB / vbmeta</strong></td>
+<td>Android 的開機驗證機制。<strong>自己編的系統必須關閉驗證才能開機</strong>。</td>
+</tr>
+<tr>
+<td><strong>EDL 模式</strong></td>
+<td>Qualcomm 晶片的底層救援模式。<strong>手機完全無法開機時的最後手段</strong>，需特殊工具與按鍵組合才能進入。</td>
+</tr>
+<tr>
+<td><strong>firehose 程式</strong></td>
+<td>EDL 救援所需的底層燒錄程式。<strong>取得困難，是本專案救援時卡住的關鍵</strong>。</td>
+</tr>
+<tr>
+<td><strong>anti-rollback（防回滾）</strong></td>
+<td>手機的安全機制：<strong>禁止降級到舊版韌體</strong>。誤觸可能導致手機永久無法使用。</td>
+</tr>
+<tr>
+<td><strong>OTA / sideload</strong></td>
+<td>線上更新 / 手動將更新檔餵給手機。</td>
+</tr>
+<tr>
+<td><strong><code>mka bacon</code></strong></td>
+<td>LineageOS 的建置指令之一，產出「可直接刷入的完整 ROM 包」。</td>
+</tr>
+<tr>
+<td><strong>GKI（通用核心映像）</strong></td>
+<td>Google 推動的標準化核心。若使用別台手機的通用核心，<strong>很可能與本機硬體設定不匹配而開不了機</strong>。</td>
+</tr>
+<tr>
+<td><strong>f2fs / ext4</strong></td>
+<td>Android 常用的兩種檔案系統格式。<strong>資料分區建立時若缺少加密相關特性，系統將無法啟動</strong>。</td>
+</tr>
+<tr>
+<td><strong>Soong / Android.bp</strong></td>
+<td>Android 的建置系統與其設定檔。</td>
+</tr>
+<tr>
+<td><strong><code>generated_kernel_includes</code></strong></td>
+<td>建置系統中負責「準備核心標頭檔」的模組。本專案曾在此卡關近一週。</td>
+</tr>
+<tr>
+<td><strong><code>neverallow</code> 規則</strong></td>
+<td>Android 安全政策中的「絕對禁止」規則。<strong>不可繞過</strong>；遇到它只能改變作法。</td>
+</tr>
+<tr>
+<td><strong>TWRP / OrangeFox</strong></td>
+<td>第三方開發的「復原模式」（Recovery），用於刷機、備份、清除資料。<strong>非本專案開發，本專案僅使用</strong>。</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h1 id="2">2. 背景：這個專案面對什麼問題</h1>
+<h2 id="21-vs">2.1 手機廠的系統 vs. 使用者的選擇權</h2>
+<p>手機出廠預裝的系統由廠商控制。使用者若想要不同特性——例如<strong>更嚴格的隱私控制</strong>——選項之一是改用開源系統。</p>
+<h2 id="22">2.2 開源系統的支援是「一台一台做」的</h2>
+<p>LineageOS 必須為每個機型提供專屬的 Device Tree。機型太新或無人開發，就<strong>沒有官方支援</strong>。</p>
+<p><strong>本機型的實際狀況（已查證）</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>狀態</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>LineageOS 官方是否支援</td>
+<td><strong>否</strong>（官方軟體清單中查無此機型）⇒ 本專案產出屬 UNOFFICIAL</td>
+</tr>
+<tr>
+<td>是否已有前人建立的 Device Tree</td>
+<td><strong>有</strong>，由社群開發者維護（主體約 131 次提交），本專案直接取用</td>
+</tr>
+<tr>
+<td>原廠核心原始碼是否公開</td>
+<td><strong>有</strong>，Nothing 官方已完整釋出並持續更新（最新更新至 2026-09）</td>
+</tr>
+<tr>
+<td>是否已有第三方復原模式</td>
+<td><strong>有</strong>，第三方開發者已釋出 TWRP 裝置設定，本專案直接使用</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>⚠️ 重要說明（本專案的定位）</strong>
+本專案<strong>不是</strong>「在一片空白中從零建立 Device Tree」。
+它的定位是：<strong>取用社群既有的裝置設定與原廠公開的原始碼，解決「讓它真的能在這台手機上運作」的問題</strong>。
+完整分工見第 6 節。</p>
+</blockquote>
+<h2 id="23">2.3 真正的難點在哪裡</h2>
+<table>
+<thead>
+<tr>
+<th>難點</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>編得出來 ≠ 開得起來</strong></td>
+<td>建置流程順利完成，產出的系統裝進手機卻可能無法開機。</td>
+</tr>
+<tr>
+<td><strong>錯誤訊息不會直接指出原因</strong></td>
+<td>例如「USB 完全不反應」的背後，真因可能是資料分區的檔案系統特性。</td>
+</tr>
+<tr>
+<td><strong>除錯成本極高</strong></td>
+<td>首次完整建置耗時 <strong>8 小時 46 分</strong>；一次錯誤的設定變更曾造成 <strong>14 小時白費</strong>。</td>
+</tr>
+<tr>
+<td><strong>搞錯可能讓手機變磚</strong></td>
+<td>本專案期間<strong>至少發生兩次</strong>手機完全無法開機的狀態。</td>
+</tr>
+<tr>
+<td><strong>開發環境本身會出問題</strong></td>
+<td>硬碟空間不足、硬碟讀寫間歇失敗、長時間建置被系統強制中止。</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h1 id="3-2026-07-08-2026-10-08">3. 完整時間軸（2026-07-08 → 2026-10-08）</h1>
+<hr />
+<h2 id="0_1">第 0 期｜前置條件（本專案開始之前）</h2>
+<table>
+<thead>
+<tr>
+<th>時間</th>
+<th>事件</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2026-03</td>
+<td><strong>Nothing 官方釋出核心原始碼與裝置設定</strong>（GitHub 專案說明逐字為 <em>"Kernel Source and devicetree for NOTHING Phone(4a) Pro"</em>）。後續多次更新，最新一次併入 Linux 6.6.127。</td>
+</tr>
+<tr>
+<td>2026-05-07</td>
+<td>社群開發者 <strong>Alexander Koskovich</strong> 建立此機型的 Device Tree（第一個提交）。</td>
+</tr>
+<tr>
+<td>2026-06-22</td>
+<td>社群開發者 Cosmin Tanislav 實作單擊感測器。</td>
+</tr>
+<tr>
+<td>2026-07</td>
+<td>社群主要開發期（單月約 127 次提交）。</td>
+</tr>
+<tr>
+<td>2026-07-05</td>
+<td>代號更名 <code>froggerpro</code> → <code>FroggerPro</code>。</td>
+</tr>
+<tr>
+<td>2026-07-08</td>
+<td>第三方開發者 <strong>newqiyton</strong> 釋出此機型的 TWRP 復原模式裝置設定。</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="1-2026-07-08-07-22">第 1 期｜起步：從「連環境都沒有」到能建置（2026-07-08 ~ 07-22）</h2>
+<h3 id="11">1.1 起點：最基本的問題</h3>
+<p>本階段留下的最早紀錄是<strong>關於如何取得原始碼的基本問題</strong>——「<code>repo sync</code> 在 Windows 上也可以嗎？」當時的規劃是用 Windows 加上 WSL（Linux 子系統），並研究如何把 ext4 格式的外接硬碟掛載進 Linux。</p>
+<p><strong>這也是本專案最誠實的起點</strong>：不是從懂開始，而是從「不確定這樣做行不行」開始。</p>
+<h3 id="12-2026-07-16">1.2 環境與素材（2026-07-16 紀錄）</h3>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>內容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>作業系統</td>
+<td>從 Windows/WSL 起步，最終採用 <strong>Arch Linux（CachyOS）</strong></td>
+</tr>
+<tr>
+<td>原始碼</td>
+<td>LineageOS 23.2（Android 16，建置代號 <code>BP4A.251205.006</code>）</td>
+</tr>
+<tr>
+<td><strong>Device Tree（裝置設定）</strong></td>
+<td><strong>取用社群既有的</strong> <code>AmphibianArcade/android_device_nothing_FroggerPro</code>（分支 <code>lineage-23.2</code>）</td>
+</tr>
+<tr>
+<td><strong>Kernel Tree（核心原始碼）</strong></td>
+<td><strong>取用社群既有的</strong> <code>AmphibianArcade/android_kernel_nothing_sm7750</code></td>
+</tr>
+<tr>
+<td><strong>Vendor Blobs（驅動檔案）</strong></td>
+<td>從原廠 B4.1 更新檔提取，<strong>1,810 個檔案</strong></td>
+</tr>
+<tr>
+<td>復原模式（Recovery）</td>
+<td><strong>使用第三方既有的 TWRP</strong>（<code>newqiyton/twrp_device_nothing_froggerPro</code>）<strong>，本專案僅使用，未自行開發</strong></td>
+</tr>
+<tr>
+<td>建置指令</td>
+<td><code>lunch lineage_FroggerPro bp4a userdebug</code> ＋ <code>m bacon -j8</code></td>
+</tr>
+<tr>
+<td>編譯工具鏈</td>
+<td>clang 22.1.8 ＋ LLD 22.1.8</td>
+</tr>
+</tbody>
+</table>
+<h3 id="13-rom">1.3 反組譯另一個 ROM 以取得關鍵設定</h3>
+<p>為了取得核心設定與硬體描述，本階段對另一個社群 ROM（Evolution X）的更新檔進行拆解分析：</p>
+<ul>
+<li>從 <code>payload.bin</code> 取出 <code>boot.img</code>、<code>vendor_boot.img</code>、<code>dtbo.img</code></li>
+<li><code>boot.img</code>：ARM64 核心映像，34.8 MB，由 clang 21.0.0 編譯</li>
+<li><code>vendor_boot.img</code>：LZ4 壓縮的 vendor ramdisk ＋ <strong>7 個 Qualcomm SM7750 裝置描述覆蓋層</strong></li>
+<li>成功取出核心設定檔與裝置描述檔（<code>froggerpro_kernel_config.txt</code>、<code>froggerpro_sm7750.dts</code>）</li>
+</ul>
+<h3 id="14-8-46-2026-07-19">1.4 第一次完整建置：8 小時 46 分（2026-07-19 紀錄）</h3>
+<p>首次建置成功產出了全部映像檔：</p>
+<table>
+<thead>
+<tr>
+<th>產物</th>
+<th>大小</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>boot.img</code></td>
+<td>96 MB</td>
+</tr>
+<tr>
+<td><code>vendor_boot.img</code></td>
+<td>104 MB</td>
+</tr>
+<tr>
+<td><code>system.img</code></td>
+<td>572 MB</td>
+</tr>
+<tr>
+<td><code>product.img</code></td>
+<td>344 MB</td>
+</tr>
+<tr>
+<td><code>vendor.img</code></td>
+<td>24 MB</td>
+</tr>
+<tr>
+<td><code>vendor_dlkm.img</code></td>
+<td>31 MB</td>
+</tr>
+<tr>
+<td><code>system_ext.img</code></td>
+<td>184 MB</td>
+</tr>
+<tr>
+<td><code>recovery.img</code></td>
+<td>100 MB</td>
+</tr>
+<tr>
+<td><code>dtbo.img</code></td>
+<td>50 MB</td>
+</tr>
+<tr>
+<td><code>dtb.img</code></td>
+<td>98 MB</td>
+</tr>
+</tbody>
+</table>
+<p><strong>但這次建置的 VINTF 檢查未通過。</strong></p>
+<h3 id="15-14-2026-07-19">1.5 一次代價 14 小時的錯誤（2026-07-19）</h3>
+<p>第二次建置時，因為<strong>變更了 release 名稱</strong>（<code>trunk_staging</code> → <code>bp4a</code>），導致建置快取被清空；<strong>14 小時後在安全政策編譯階段失敗</strong>。</p>
+<p>失敗原因是安全政策中的一條規則與既有政策重複：</p>
+<blockquote>
+<p><code>genfscon proc /sys/walt</code> 與原廠預編政策重複 ⇒ 政策編譯器報 <code>Found conflicting genfscon rules</code></p>
+</blockquote>
+<p><strong>解法</strong>：刪除該條重複規則。</p>
+<blockquote>
+<p><strong>📌 值得注意</strong>：這與 10 月安全性更新時遇到的問題<strong>屬於同一類</strong>（移植的政策檔案與上游重複）——同一個坑在專案中出現過兩次。</p>
+</blockquote>
+<h3 id="16-2026-07-20">1.6 政策編譯的神祕失敗（2026-07-20 分析）</h3>
+<p>建置在第 344/2955 個任務（<code>product_sepolicy.cil</code>）失敗，但：</p>
+<ul>
+<li><strong>沒有 stderr 輸出</strong>（即使已加 <code>2&gt;&amp;1</code>）</li>
+<li>沒有崩潰／記憶體不足／被砍的痕跡</li>
+<li><strong><code>plat_sepolicy.cil</code> 從未在紀錄中出現</strong> —— 完全沒有建置步驟</li>
+</ul>
+<p>推論：<code>product_sepolicy.cil</code> 的處理依賴 <code>plat_sepolicy.cil</code>，若後者尚未產生，前者就會因輸入檔不存在而失敗。</p>
+<h3 id="17-2026-07-22">1.7 建置系統崩潰（2026-07-22 紀錄）</h3>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>內容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>現象</td>
+<td><code>make bootimage</code> / <code>make recoveryimage</code> / <code>m vendorbootimage</code> <strong>全部崩潰</strong></td>
+</tr>
+<tr>
+<td>錯誤</td>
+<td>建置系統內部元件（Soong <code>dumpMakeVars</code>）發生 Go 語言 panic，且<strong>每次都是同一個堆疊</strong></td>
+</tr>
+<tr>
+<td>已排除</td>
+<td>設定檔缺失、建置組合錯誤、核心設定問題</td>
+</tr>
+<tr>
+<td>當時產出</td>
+<td>全部是舊快取（7/21 00:49 之前）</td>
+</tr>
+<tr>
+<td>另一個發現</td>
+<td><code>vendor_boot.img</code> 只有 22 MB（<strong>正確應約 96 MB</strong>）</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="2-2026-07-22-08-19">第 2 期｜核心編譯、首次完整成功，與變磚救援（2026-07-22 ~ 08-19）</h2>
+<h3 id="21-5-2026-07-26">2.1 核心編譯：腳本連續失敗 5 版（2026-07-26 紀錄）</h3>
+<p>核心編譯是這個階段最困難的部分。以下是真實的失敗與修正過程：</p>
+<table>
+<thead>
+<tr>
+<th>版本</th>
+<th>問題</th>
+<th>根本原因</th>
+<th>解法</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>v1</td>
+<td>找不到 <code>vendor/FroggerPro.config</code></td>
+<td>該檔案不存在於本機核心樹</td>
+<td>改用通用設定檔 ＋ 效能設定檔</td>
+</tr>
+<tr>
+<td>v2</td>
+<td>設定合併後<strong>卡住等待輸入</strong></td>
+<td>新選項導致設定工具以互動模式詢問</td>
+<td>加上非互動環境變數</td>
+</tr>
+<tr>
+<td>v3</td>
+<td><strong>連結器錯誤：<code>undefined reference to 'main'</code></strong>（80+ 行）</td>
+<td>編譯環境的 <strong>GCC 16 與 clang 產生的物件檔不相容</strong></td>
+<td>全面改用 clang 工具鏈（<code>HOSTCC</code>、<code>HOSTLD</code> 全改）</td>
+</tr>
+<tr>
+<td>v4</td>
+<td>BPF 工具編譯失敗（<code>resolve_btfids/libbpf</code>）</td>
+<td>新版 clang 與舊版函式庫不相容</td>
+<td>關閉該功能（<code>CONFIG_DEBUG_INFO_BTF</code>）</td>
+</tr>
+<tr>
+<td>v5</td>
+<td>複製映像檔時找不到檔案</td>
+<td>切換目錄後路徑遺失</td>
+<td>腳本開頭先保存根目錄路徑</td>
+</tr>
+</tbody>
+</table>
+<p><strong>另一條更隱蔽的真因</strong>：設定檔合併工具保留了<strong>上一次的殘留設定</strong>，導致錯誤選項（<code>ARM_SMMU=y</code>）被保留，直接造成連結器崩潰。
+<strong>解法</strong>：編譯前徹底清除舊設定 ＋ 加入安全檢查。</p>
+<p><strong>結果（2026-07-26）</strong>：核心編譯成功 —— <code>Linux version 6.6.102-4k-g2f2119f512bd</code>，28 MB；
+<code>make bootimage vendorbootimage recoveryimage</code> 僅需 <strong>23 秒</strong>（因核心已預先編好）。</p>
+<h3 id="22-11-2026-07-26">2.2 這階段共踩過的 11 個錯誤（專案自行整理的清單，2026-07-26）</h3>
+<table>
+<thead>
+<tr>
+<th>分類</th>
+<th>數量</th>
+<th>內容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>核心編譯</td>
+<td>5</td>
+<td>設定檔不存在、設定卡住、GCC/clang 不相容、BPF 工具編譯失敗、路徑遺失</td>
+</tr>
+<tr>
+<td>ROM 編譯</td>
+<td>4</td>
+<td>目標名稱錯誤（<code>vendor_bootimage</code>）、音訊模組覆蓋警告、兩處模組重複定義（繪圖、顯示介面）</td>
+</tr>
+<tr>
+<td>產品名稱</td>
+<td>1</td>
+<td><code>lineage_FroggerPro</code> 名稱重複 ⇒ 需清除快取</td>
+</tr>
+<tr>
+<td>刷機</td>
+<td>2</td>
+<td>無法進入 fastbootd、<code>fastboot -w</code> 不支援 raw 檔案系統</td>
+</tr>
+</tbody>
+</table>
+<h3 id="23-2026-07-28">2.3 建置系統的模組重複問題（2026-07-28）</h3>
+<p>建置時出現建置系統的模糊測試目標（fuzz target）<strong>重複定義</strong>：<code>aidl_fuzzer_display_gralloc</code>。</p>
+<p>另外還有兩處模組重複定義（圖形介面 <code>gralloc</code>、顯示介面 <code>display-intf</code>）。處理方式包含：
+- 跳過模糊測試（只編開機映像）
+- 將衝突的驅動程式目錄移出（改名為 <code>*_DISABLED</code>）</p>
+<h3 id="24">2.4 模組宣告與驅動設定</h3>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>內容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>驅動模組宣告</td>
+<td>在 <code>vendor/nothing/FroggerPro/Android.bp</code> 新增 <code>libaacvibrator</code>、<code>libics_haptic</code> 兩個預編模組宣告（其中一個需關閉 ELF 檢查，因其缺少動態區段）</td>
+</tr>
+<tr>
+<td>安全政策</td>
+<td>刪除與原廠預編政策重複的 <code>genfscon</code> 規則</td>
+</tr>
+<tr>
+<td>產品名稱</td>
+<td>修正 <code>lineage_FroggerPro</code> 名稱重複導致的建置失敗</td>
+</tr>
+</tbody>
+</table>
+<h3 id="25-wipe-super-2026-08-07">2.5 ★手機第一次變磚：<code>wipe-super</code> 事故（2026-08-07 紀錄）</h3>
+<p><strong>事件</strong>：執行 <code>wipe-super</code> 後，<code>super</code> 分區被寫成原始（raw）型態、容量 9 GB；<strong>所有開機映像都無法進入 fastbootd</strong>，兩個系統槽都直接跳回 bootloader。</p>
+<p>手機進入 <strong>EDL 模式</strong>（USB 識別碼 <code>05c6:9008</code>，Qualcomm HS-USB QDLoader 9008）。</p>
+<p><strong>嘗試過的救援路徑</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>檢查對象</th>
+<th>結果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>原廠 <code>firmware.7z</code>（109 MB）</td>
+<td>只有分區映像（abl、xbl、tz、aop、uefi 等）—— <strong>無 firehose 程式</strong></td>
+</tr>
+<tr>
+<td>原廠 <code>boot.7z</code>（31 MB）</td>
+<td>只有 boot、dtbo、init_boot、recovery、vbmeta —— <strong>無 firehose</strong></td>
+</tr>
+<tr>
+<td>原廠 <code>logical.7z</code>（6 GB+）</td>
+<td>內容為邏輯分區映像 —— <strong>幾乎不可能有 firehose</strong></td>
+</tr>
+<tr>
+<td><code>spike0en/nothing_archive</code> 韌體庫</td>
+<td>是 Nothing OS 固件檔案庫（含解壓工具）—— <strong>無 firehose</strong></td>
+</tr>
+<tr>
+<td>開源 EDL 工具（<code>bkerler/edl</code>）</td>
+<td>已安裝；其中含 Nothing 專用認證模組（產品代號對照：20111=NP1、22111=NP2、23111=NP2a）</td>
+</tr>
+</tbody>
+</table>
+<p><strong>缺少的關鍵</strong>：SM7750 適用的 firehose 程式（<code>prog_firehose_ddr.elf</code>）。</p>
+<h3 id="26-2026-08-25">2.6 ★手機第二次變磚：開機映像過大事故（2026-08-25）</h3>
+<p><strong>事件</strong>：嘗試把 TWRP 復原映像刷進開機分區：</p>
+<blockquote>
+<p><code>fastboot flash boot recovery.img</code> → <strong><code>Volume Full</code></strong>
+<code>fastboot boot recovery.img</code> → <strong><code>Bad Buffer Size</code></strong></p>
+</blockquote>
+<p><strong>根本原因</strong>：</p>
+<ul>
+<li>開機分區大小 = <strong>96 MB</strong>；TWRP 復原映像 = <strong>100 MB</strong> ⇒ <strong>塞不下</strong></li>
+<li>此機型<strong>沒有獨立的 recovery 分區</strong>（復原檔嵌在開機映像的 ramdisk 裡）</li>
+<li>更嚴重的是：早期韌體分區（<code>abl</code>、<code>uefi</code>、<code>xbl</code>）<strong>被 TWRP 映像覆蓋破壞</strong></li>
+</ul>
+<p><strong>救援過程（依序嘗試，全部留下紀錄文件）</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>步驟</th>
+<th>做法</th>
+<th>結果／學到的教訓</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>刷 LineageOS 產出的開機映像（boot／vendor_boot／dtbo／init_boot）</td>
+<td>仍跳回 bootloader</td>
+</tr>
+<tr>
+<td>2</td>
+<td>vbmeta 加上 <code>--disable-verity --disable-verification</code></td>
+<td>發現先前漏加 ⇒ AVB 驗證失敗是原因之一</td>
+</tr>
+<tr>
+<td>3</td>
+<td>三組 vbmeta（vbmeta／vbmeta_system／vbmeta_vendor）<strong>兩個槽都刷</strong></td>
+<td>仍未解決</td>
+</tr>
+<tr>
+<td>4</td>
+<td>完整刷回原廠<strong>所有</strong>韌體分區（第一組：abl、uefi、uefisecapp、xbl、xbl_config、tz、hyp、aop、aop_config、devcfg、imagefv、cpucp、cpucp_dtb、featenabler、shrm、qupfw、pvmfw、keymaster、dsp）</td>
+<td>針對「早期韌體被覆蓋」這個真因</td>
+</tr>
+<tr>
+<td>5</td>
+<td>強制切回 A 槽並清除「不可開機」標記（<code>fastboot set_active a</code>）</td>
+<td>處理 B 槽被標記不可開機的問題</td>
+</tr>
+<tr>
+<td>6</td>
+<td>最小組合救援：重新刷 abl、xbl、boot、init_boot、dtbo、vendor_boot、super ⇒ <code>fastboot -w</code> ⇒ 開機</td>
+<td>最終救援組合</td>
+</tr>
+<tr>
+<td>7</td>
+<td><strong>風險評估</strong>：另立紀錄專門檢查 <strong>anti-rollback（防回滾）</strong></td>
+<td>確認刷入的原廠韌體版本，避免觸發「禁止降級」而使手機永久損壞</td>
+</tr>
+<tr>
+<td>8</td>
+<td><code>fastboot oem edl</code> 指令<strong>被鎖</strong>（回報 unknown command）</td>
+<td>⇒ 必須改用<strong>硬體按鍵組合</strong>進入 EDL（音量上 ＋ 音量下 ＋ 電源）</td>
+</tr>
+</tbody>
+</table>
+<h3 id="27-2026-08-0908-13">2.7 建置成功（2026-08-09、08-13，多次）</h3>
+<p><strong>里程碑</strong>：完整建置成功並產出可刷的 ROM 包。<strong>產物檔名本身即為證據</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>產物檔名</th>
+<th>意義</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>lineage-23.2-20260809-UNOFFICIAL-froggerPro.zip</code></td>
+<td>建置日 2026-08-09</td>
+</tr>
+<tr>
+<td><code>lineage-23.2-20260813-UNOFFICIAL-froggerPro.zip</code>（約 862 MB）</td>
+<td>建置日 2026-08-13</td>
+</tr>
+<tr>
+<td><code>lineage-23.2-20260920-UNOFFICIAL-froggerPro.zip</code></td>
+<td>建置日 2026-09-20</td>
+</tr>
+<tr>
+<td><code>lineage-23.2-20260921-UNOFFICIAL-froggerPro.zip</code></td>
+<td>建置日 2026-09-21</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>📌 檔名中的日期是什麼？</strong>
+它是 <strong>建置當下的 UTC 日期</strong>——定義於 LineageOS 原始碼 <code>vendor/lineage/config/version.mk</code>：
+<code>LINEAGE_BUILD_DATE := $(shell date -u +%Y%m%d)</code>
+<strong>不是</strong>檔案被建立的時間，也不是任何文件上的記載日期。</p>
+<p><strong>📌 為什麼會出現多個日期？</strong>
+建置產物清單顯示數個不同日期的檔名<strong>大小相同、時間相同、連結數為 5</strong> ⇒ 它們是<strong>同一份檔案的多個硬連結</strong>（每次建置會覆寫同一份輸出檔，並額外掛上一個當日日期的新名稱；因此舊日期名稱會成為內容已被覆寫的別名）。</p>
+<p>※ 這些產物為節省硬碟空間，後續已刪除。</p>
+</blockquote>
+<h3 id="28-2026-08-19-09-08">2.8 停滯期（2026-08-19 ~ 09-08）</h3>
+<p><strong>最後活動：2026-08-19（之後暫停）。</strong> 這段期間專案沒有推進。</p>
+<hr />
+<h2 id="3-2026-09-09-09-16">第 3 期｜核心重編與開機映像測試（2026-09-09 ~ 09-16）</h2>
+<h3 id="31">3.1 接續：核心編譯的符號缺失問題</h3>
+<p>重新啟動後，核心編譯在<strong>連結階段失敗</strong>，錯誤全是 <strong>undefined symbol</strong> —— 代表有些驅動被編譯進核心，但依賴的模組沒被啟用。</p>
+<p><strong>真因與解法</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>問題</th>
+<th>真因</th>
+<th>解法</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>連結器找不到 <code>qcom_scm_assign_mem</code> 等符號</td>
+<td><code>CONFIG_QCOM_IOMMU_UTIL</code> 是<strong>三態選項</strong>卻被設成 <code>=y</code>，與 <code>CONFIG_QCOM_SCM=m</code>（強制為模組）衝突</td>
+<td>改設為 <code>=m</code></td>
+</tr>
+<tr>
+<td>clang 內建 ASAN 衝突</td>
+<td>KASAN 與 clang 內建 ASAN 衝突</td>
+<td>關閉 KASAN</td>
+</tr>
+</tbody>
+</table>
+<p><strong>做法</strong>：三層設定合併（<code>gki_defconfig</code> → <code>kera_le</code> → <code>FroggerPro</code>），並補 4 行設定。</p>
+<p><strong>結果</strong>：核心映像 <code>arch/arm64/boot/Image</code> 編譯成功（30～31 MB）；<code>boot.img</code> 編譯成功。</p>
+<h3 id="32-2026-09-09-09-17">3.2 檔案傳遞的枝節問題（2026-09-09 ~ 09-17）</h3>
+<p>由於開發機與工作機是兩台不同機器，這個階段大量的時間花在<strong>把腳本從一邊傳到另一邊</strong>：</p>
+<ul>
+<li>一開始誤給了「會重新下載原始碼」的自包含版腳本 ⇒ 使用者按了 Ctrl+C 中止</li>
+<li>改為「輕量版」腳本（不下載，只做設定合併與編譯）</li>
+<li>連接埠混淆（一度給錯埠號）、HTTP 404／400／502 錯誤</li>
+<li>最後改為<strong>直接把腳本內容貼在對話中</strong>讓使用者自行建立檔案</li>
+</ul>
+<h3 id="33-2026-09-16">3.3 用「只換核心」的方式驗證（2026-09-16）</h3>
+<p><strong>事件</strong>：直接刷入自製的 <code>boot.img</code> ⇒ <strong>開機迴圈（bootloop）</strong>。</p>
+<p><strong>真因</strong>：自製開機映像的初始化程序（ramdisk）與原廠的 vendor／system 分區不相容。</p>
+<p><strong>中途的岔路討論</strong>：使用者提出「<strong>DSU 可以代替直接刷機</strong>」的想法。經分析：</p>
+<ul>
+<li>DSU（動態系統更新）是 Android 內建的「試用模式」，<strong>只換 system 分區，不換 vendor 與核心</strong></li>
+<li>對本專案而言，vendor 依賴（HAL、媒體、圖形）不相容，效果有限</li>
+<li><strong>結論：使用者決定仍走傳統刷機路線</strong></li>
+</ul>
+<p><strong>接著發展出「混合開機映像」策略</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>元件</th>
+<th>來源</th>
+<th>理由</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>核心（kernel）</td>
+<td><strong>自製</strong>（30～31 MB）</td>
+<td>要驗證的核心</td>
+</tr>
+<tr>
+<td>初始化程序（ramdisk）</td>
+<td><strong>原廠</strong></td>
+<td>與原廠 vendor／system 相容</td>
+</tr>
+<tr>
+<td>裝置描述（dtb）</td>
+<td>自製映像中取出</td>
+<td>對應本機硬體</td>
+</tr>
+</tbody>
+</table>
+<p>目的：<strong>只替換核心、保留原廠初始化程序</strong> ⇒ 可先驗證核心穩定性，而不必一次承擔整個系統的相容性風險。</p>
+<hr />
+<h2 id="4-2026-09-16-09-21">第 4 期｜核心標頭檔大戰與交棒（2026-09-16 ~ 09-21）</h2>
+<p><strong>這是專案中技術難度最高、耗時最長的一段。</strong></p>
+<h3 id="41">4.1 問題現象</h3>
+<p>建置失敗，錯誤逐字：</p>
+<blockquote>
+<p><code>hardware/qcom-caf/sm8750/display/core/libdrmutils/drm_master.cpp:48:10: fatal error: 'display/drm/sde_drm.h' file not found</code></p>
+</blockquote>
+<p>同一個檔案還缺少第二個標頭檔：<code>msm_drm_aiqe.h</code>。</p>
+<h3 id="42-6">4.2 真因追查鏈（共 6 個層次）</h3>
+<table>
+<thead>
+<tr>
+<th>層次</th>
+<th>發現</th>
+<th>結果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>sde_drm.h</code> 確實存在於核心原始碼樹中：<code>vendor/qcom/opensource/display-drivers/include/uapi/display/drm/sde_drm.h</code></td>
+<td>但建置系統的搜尋路徑<strong>吃不到</strong>這個位置</td>
+</tr>
+<tr>
+<td>2</td>
+<td>嘗試用「預編標頭檔壓縮包」（<code>TARGET_PREBUILT_KERNEL_HEADERS</code>）</td>
+<td><strong>永遠不會生效</strong></td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>★關鍵真因★</strong>：建置系統 <code>generated_kernel_includes</code> 模組的邏輯中，<code>elif [ -f "$(TARGET_KERNEL_SOURCE)/Makefile" ]</code> 這個條件<strong>永遠先成立</strong>（因為核心原始碼的 <code>Makefile</code> 存在）⇒ 永遠走「從原始碼安裝標頭檔」的路徑 ⇒ <strong>永遠不會解壓縮預編標頭檔包</strong></td>
+<td>而該路徑只安裝標準核心標頭檔，<strong>不含</strong>廠商顯示驅動標頭檔</td>
+</tr>
+<tr>
+<td>4</td>
+<td>改用「把廠商標頭檔塞進核心原始碼的 <code>include/uapi/</code>」⇒ 直接讓安裝流程自己撿到</td>
+<td>檔案確實被塞進去了（<code>sde_drm.h</code>、<code>msm_drm_aiqe.h</code>、<code>msm_drm_pp.h</code>、<code>msm_hdmi_hdcp_mgr.h</code>、<code>msm_sde_rotator.h</code>、<code>mmm_color_fmt.h</code>）——<strong>但建置仍然失敗</strong></td>
+</tr>
+<tr>
+<td>5</td>
+<td>懷疑建置系統仍用舊快取；清除快取後重跑</td>
+<td><code>generated_kernel_includes</code> 的輸出目錄裡<strong>仍然沒有</strong>這些檔案</td>
+</tr>
+<tr>
+<td>6</td>
+<td>逐一排除嫌疑：<code>clean_headers.sh</code>（只清兩個 <code>signal.h</code>）、<code>TARGET_KERNEL_SOURCE</code> 設定（<code>BoardConfig.mk</code> 中查無）</td>
+<td>皆非元凶</td>
+</tr>
+</tbody>
+</table>
+<h3 id="43-2026-09-21-0115">4.3 最終處置（2026-09-21 01:15）</h3>
+<p>由於建置系統的路徑判斷問題一時無法從根本上解決，最終採取<strong>手動補檔</strong>：</p>
+<p>直接在手動建立的輸出目錄中放入所需的標頭檔（<code>sudo mkdir -p out/soong/.intermediates/vendor/lineage/build/soong/generated_kernel_includes/gen/usr/include/linux</code> ⇒ <code>sudo cp</code>）。</p>
+<blockquote>
+<p><strong>📌 這是本專案的一個技術債</strong>：它解決了當下的問題，但<strong>不是乾淨的修法</strong>，重新建置時需要重做。</p>
+</blockquote>
+<h3 id="44-2026-09-21">4.4 交棒（2026-09-21）</h3>
+<p>刷入再次失敗，錯誤逐字：</p>
+<blockquote>
+<p><code>Cannot add partition odm_b to group qti_dynamic_partitions_b</code></p>
+</blockquote>
+<p><strong>根本原因</strong>（已診斷）：ROM 的更新描述嘗試建立 <code>odm_b</code> 分區，但原廠 <code>super</code> 的中介資料中<strong>已經存在</strong> <code>odm_b</code> ⇒ 衝突 ⇒ 錯誤碼 7。</p>
+<p><strong>解法</strong>：先用建置產出的 <code>super_empty.img</code> 清空 <code>super</code> 之中介資料，再重新刷入。</p>
+<p>此時產出 <strong>394 行的交接文件</strong> 與 <strong>100 MB 的開發存檔包（560 個檔案）</strong>，<strong>任務移交到另一台電腦繼續</strong>（含<strong>完整對話紀錄 1.28 MB</strong>）。</p>
+<hr />
+<h2 id="5-2026-09-21-09-28">第 5 期｜分區管理器時期：大量實驗（2026-09-21 ~ 09-28）</h2>
+<p>交棒後進入密集實驗期。本階段留下<strong>數百個實驗紀錄與輸出</strong>，其特徵是<strong>大量「單一變因」的對照實驗</strong>。</p>
+<table>
+<thead>
+<tr>
+<th>類別</th>
+<th>做法</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>分區幾何分析</strong></td>
+<td>用同一支工具（<code>lpdump</code>）比對「確定能開機的版本」與自製版本的 <code>super</code> 分區配置</td>
+</tr>
+<tr>
+<td><strong>開機鏈比對</strong></td>
+<td>逐一比對 boot／init_boot／vendor_boot 的內容（含 ramdisk 展開比對）</td>
+</tr>
+<tr>
+<td><strong>混合映像實驗</strong></td>
+<td>自製 super ＋ 原廠 vendor、自製 super ＋ 原廠 boot 鏈等多種組合</td>
+</tr>
+<tr>
+<td><strong>二分法定位</strong></td>
+<td>把嫌疑範圍從「全部」逐步收斂到特定檔案群</td>
+</tr>
+<tr>
+<td><strong>建置鏈實驗</strong></td>
+<td>連續編號的建置（C17 → C63）逐一排除</td>
+</tr>
+<tr>
+<td><strong>模組與驅動稽核</strong></td>
+<td>比對驅動檔案與模組清單、檢查相依性、檢查介面程式庫</td>
+</tr>
+<tr>
+<td><strong>快取完整性</strong></td>
+<td>處理建置被系統強制中止（記憶體壓力）造成的問題</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>詳細的逐節紀錄見 <code>FroggerPro_CHANGELOG_ARCHIVE.md</code>（155 節，6,565 行）。</p>
+</blockquote>
+<hr />
+<h2 id="6-2026-09-28-10-01">第 6 期｜讓手機真的開起來（2026-09-28 ~ 10-01）</h2>
+<p><strong>本階段是整個專案最關鍵的突破。</strong></p>
+<table>
+<thead>
+<tr>
+<th>日期</th>
+<th>事件</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>09-27</td>
+<td><strong>首次把介面庫、HAL 服務、指紋 HAL 全部正確裝進 vendor 分區</strong></td>
+<td>這是「功能能否運作」的前提；建置零錯誤</td>
+</tr>
+<tr>
+<td>09-27</td>
+<td>取得<strong>世代吻合</strong>的原廠驅動檔案</td>
+<td>驅動版本與系統版本必須對齊</td>
+</tr>
+<tr>
+<td>09-28</td>
+<td><strong>更新 Device Tree 至上游最新版</strong></td>
+<td>起因是一句關鍵質疑：「你確定 device tree 是最新的？」經查證，本機版本停留在 2026-07-16 而上游已到 2026-09-25，<strong>落後 56 次提交</strong></td>
+</tr>
+<tr>
+<td>09-29 01:39</td>
+<td>刷入自製系統 ⇒ <strong>手機完全沒反應</strong>（USB 不列舉）</td>
+<td>症狀與最初描述一致</td>
+</tr>
+<tr>
+<td>09-29 02:35~04:35</td>
+<td>查出 <code>super</code> 分區<strong>切法異常</strong>；三種修改方式<strong>實測全部失敗</strong></td>
+<td>以同一工具比對「確定能開機的版本」</td>
+</tr>
+<tr>
+<td>09-29 04:00~05:40</td>
+<td>以<strong>單一變因實驗</strong>確認建置失敗原因：vendor 分區宣告大小過大（3.87 GB）</td>
+<td>修改單一數值反覆驗證 ⇒ <strong>建置完整成功</strong></td>
+</tr>
+<tr>
+<td>09-29 11:44</td>
+<td><strong>找到「卡在開機標誌」的真正原因</strong></td>
+<td>資料分區的檔案系統<strong>少了加密相關特性</strong>，使系統無法安裝加密金鑰（錯誤逐字：<code>Failed to install fscrypt key to /data: Operation not supported on transport endpoint (ENOTSUP)</code>），進而導致系統服務無法啟動</td>
+</tr>
+<tr>
+<td>09-29 15:36</td>
+<td><code>vendor_boot</code> 的裝置描述被打包了兩份</td>
+<td>已修</td>
+</tr>
+<tr>
+<td>09-29 23:40</td>
+<td><strong>單一變因實驗：只把 vendor 分區換成確定可開機的版本 ⇒ 開機成功</strong></td>
+<td>證明問題出在自製的 vendor 內容</td>
+</tr>
+<tr>
+<td><strong>09-29 23:48</strong></td>
+<td><strong>★★★ 自製系統首次成功進入桌面</strong></td>
+<td>使用者回報螢幕顯示正常桌面</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="7-2026-10-02-10-05">第 7 期｜可刷入、可簽章、可更新、硬體逐一打通（2026-10-02 ~ 10-05）</h2>
+<p><strong>目標</strong>：讓產出從「能開機」變成「一般人可以正常使用的成品」。</p>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>內容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>可刷的完整 ROM 包</strong></td>
+<td>建置流程改為直接產出可刷入的套件：<code>lineage-23.2-20261001-UNOFFICIAL-FroggerPro.zip</code>（3,001,738,168 bytes）</td>
+</tr>
+<tr>
+<td><strong>正式簽章</strong></td>
+<td>改用自建發行金鑰簽章（而非測試金鑰），使更新機制可正常驗證</td>
+</tr>
+<tr>
+<td><strong>線上更新打通</strong></td>
+<td>修掉安裝錯誤（<code>status 7</code>，真因是 <code>super</code> 群組的中介資料），完成端到端實測，簽章驗證通過</td>
+</tr>
+<tr>
+<td><strong>灰畫面問題</strong></td>
+<td>根因：<code>/vendor/lib64</code> 下三個顯示驅動檔案在本專案中被放成<strong>實體檔</strong>，而原廠是用<strong>符號連結</strong>指向 <code>egl/</code> 子目錄 ⇒ 以建置腳本重建符號連結修正</td>
+</tr>
+<tr>
+<td><strong>黑屏開機迴圈</strong></td>
+<td>真因：顯示堆疊元件 <code>libsdmcore</code> 的未定義行為檢查（UBSan）⇒ 已解（2026-10-03 00:22 實機開機成功，開機完成時間 T+15 秒）</td>
+</tr>
+<tr>
+<td><strong>一次解決多個功能失效</strong></td>
+<td>發現 <strong>VINTF 介面清單整批缺漏</strong>，一次解釋 4~5 個功能起不來的問題（系統紀錄逐字：<code>Could not find android.hardware.sensors.ISensors/default in the VINTF manifest</code>）</td>
+</tr>
+<tr>
+<td><strong>藍牙</strong></td>
+<td>修好；真因是權限對照檔（<code>mac_permissions</code>）未被寫入</td>
+</tr>
+<tr>
+<td><strong>震動</strong></td>
+<td>修好；真因出乎意料——<strong>是框架的預設值為 0，不是硬體驅動問題</strong></td>
+</tr>
+<tr>
+<td><strong>CPU 指令集最佳化</strong></td>
+<td>設定正確的執行期指令集（<code>kryo300</code>）</td>
+</tr>
+<tr>
+<td><strong>HAL 服務缺程式庫</strong></td>
+<td>從 43 筆連結失敗降至 1 筆</td>
+</tr>
+<tr>
+<td><strong>GPS</strong></td>
+<td>硬體驗證全通</td>
+</tr>
+<tr>
+<td><strong>一次誠實的撤回</strong></td>
+<td>曾嘗試大批移植安全政策，但被系統的 <code>neverallow</code> 絕對禁止規則擋下 ⇒ <strong>撤回並回到穩定版本</strong>，未強行繞過</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="8-2026-10-05-10-08">第 8 期｜隱私強化與安全性更新（2026-10-05 ~ 10-08）</h2>
+<h3 id="81-app">8.1 自建隱私控制 App</h3>
+<table>
+<thead>
+<tr>
+<th>檔案</th>
+<th>行數</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>主程式 <code>PrivacySettingsActivity.java</code></td>
+<td><strong>847</strong></td>
+</tr>
+<tr>
+<td>設定介面 <code>privacy_prefs.xml</code></td>
+<td>205</td>
+</tr>
+<tr>
+<td>字串資源 <code>strings.xml</code></td>
+<td>105</td>
+</tr>
+<tr>
+<td>應用程式宣告 <code>AndroidManifest.xml</code></td>
+<td>54</td>
+</tr>
+<tr>
+<td>權限宣告 <code>privapp-permissions-*.xml</code></td>
+<td>14</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>共 18 個隱私開關</strong>，每個都<strong>實際接通系統機制</strong>（明確拒絕只做表面效果的「假開關」）</li>
+<li>驗證方式：直接查系統設定資料庫 ＋ App 顯示值 ＋ 受控實測，三方一致</li>
+</ul>
+<h3 id="82-selinux">8.2 SELinux 安全政策（本專案自行維護）</h3>
+<table>
+<thead>
+<tr>
+<th>檔案</th>
+<th>行數</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>froggerpro_avc_fixes.te</code></td>
+<td>220</td>
+</tr>
+<tr>
+<td><code>sepolicy/vendor/seapp_contexts</code></td>
+<td>58</td>
+</tr>
+<tr>
+<td><code>sepolicy/vendor/property_contexts</code></td>
+<td>44</td>
+</tr>
+<tr>
+<td><code>sepolicy/vendor/file_contexts</code></td>
+<td>98</td>
+</tr>
+<tr>
+<td><code>sepolicy/vendor/genfs_contexts</code></td>
+<td>28</td>
+</tr>
+<tr>
+<td><code>sepolicy/private/froggerpro_privacy.te</code></td>
+<td>25</td>
+</tr>
+</tbody>
+</table>
+<p><strong>成效</strong>：安全拒絕紀錄（AVC）<strong>103 條 → 24 條（減少 77%）</strong>；其中定位服務相關<strong>258 條 → 0 條</strong>。</p>
+<p><strong>兩個根因級的發現</strong>：</p>
+<ol>
+<li><strong>定位服務的權限切換失效</strong>：該服務實際執行在錯誤的權限網域中（而非它專屬的網域）⇒ 補上一條網域轉換規則 ⇒ 原本每 5 秒重複一次的 258 條錯誤<strong>完全消失</strong>。</li>
+<li><strong>一條安全規則從未生效</strong>：規則中的比對條件寫錯（寫成 <code>default</code>，但系統實際查詢的值是 <code>platform</code>）⇒ <strong>該規則從未被匹配過</strong> ⇒ 修正比對值後問題解決。</li>
+</ol>
+<h3 id="83">8.3 安全性更新與第二版建置</h3>
+<ul>
+<li>將原始碼同步至 <code>android-security-16.0.0_r8</code> 分支。</li>
+<li>同步過程造成<strong>兩個真實破壞</strong>（且都在建置後段才顯現，代價各約 1.5 小時）：
+  1. 跨晶片平台的 12 個建置設定檔被同步還原 ⇒ 建置立即失敗。
+  2. 一條安全政策與上游<strong>逐字重複</strong> ⇒ 政策編譯器拒絕（<code>duplicate entry for genfs entry</code>）——<strong>與 7 月踩過的是同一類問題</strong>。</li>
+<li>兩者皆已修復。</li>
+<li><strong>2026-10-08 23:56:45 建置成功</strong>，產出 <code>lineage-23.2-20261008-UNOFFICIAL-FroggerPro_privacy.zip</code>（<strong>3,063,414,358 bytes</strong>）。</li>
+</ul>
+<hr />
+<h1 id="4">4. 成果與量測數字</h1>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>數值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>專案跨度</td>
+<td>2026-07-08 → 2026-10-08＝<strong>約 92 天</strong></td>
+</tr>
+<tr>
+<td>開發紀錄</td>
+<td><strong>14,013 行 / 291 節</strong>（現行 7,448 行 ＋ 封存 6,565 行）</td>
+</tr>
+<tr>
+<td>自建工具腳本</td>
+<td><strong>291 個 / 15,617 行</strong></td>
+</tr>
+<tr>
+<td>解決的建置與刷機錯誤</td>
+<td>僅第 2 期即整理出 <strong>11 個</strong>（核心 5 ＋ ROM 4 ＋ 產品名稱 1 ＋ 刷機 2）</td>
+</tr>
+<tr>
+<td>變磚事件</td>
+<td><strong>2 次</strong>（<code>wipe-super</code> 事故、開機映像過大事故），皆救回</td>
+</tr>
+<tr>
+<td>隱私 App</td>
+<td>Java <strong>847 行</strong> ＋ XML 378 行，<strong>18 個開關</strong></td>
+</tr>
+<tr>
+<td>SELinux 政策</td>
+<td><strong>220 行</strong> ＋ 4 個 contexts 檔</td>
+</tr>
+<tr>
+<td>安全拒絕紀錄（AVC）</td>
+<td><strong>103 → 24（-77%）</strong> ※</td>
+</tr>
+<tr>
+<td>定位服務拒絕紀錄</td>
+<td><strong>258 → 0</strong> ※</td>
+</tr>
+<tr>
+<td>ROM 產物</td>
+<td>3,063,414,358 bytes（約 2.85 GB）</td>
+</tr>
+<tr>
+<td>完整建置耗時</td>
+<td>首次 8 小時 46 分；後期 6,937 秒（約 1 小時 56 分）；增量 625 秒</td>
+</tr>
+<tr>
+<td>本專案 Device Tree 提交</td>
+<td><strong>13 次</strong>（2026-10-06 ~ 10-08）</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>※ 為單次刷機後之單次取樣，未做多次重複量測。</p>
+</blockquote>
+<hr />
+<h1 id="5">5. 四個關鍵技術轉折點</h1>
+<ol>
+<li>
+<p><strong>「編譯成功」不等於「能開機」</strong>
+   使用別台手機的通用核心映像，導致反覆重啟 ⇒ 確立必須從原始碼自行編譯核心。</p>
+</li>
+<li>
+<p><strong>核心編譯的隱藏陷阱</strong>
+   舊設定檔殘留 ⇒ 錯誤選項被保留 ⇒ 連結器崩潰；同時編譯環境的新版 GCC 與 clang 產生物件檔不相容 ⇒ 全面改用 clang 工具鏈。</p>
+</li>
+<li>
+<p><strong>建置系統的條件判斷優先序（最耗時的一段）</strong>
+   預編標頭檔包永遠不會被解壓縮，因為前一個條件<strong>永遠會先成立</strong> ⇒ 花費數日追查，最終以手動補檔繞過。</p>
+</li>
+<li>
+<p><strong>卡開機的元凶在 vendor 內容，不在系統本身</strong>
+   以<strong>單一變因實驗</strong>（只替換一個分區）收斂出問題範圍——這是整個專案最具方法論意義的一步。</p>
+</li>
+</ol>
+<hr />
+<h1 id="6">6. 誠實歸屬表</h1>
+<blockquote>
+<p>本節目的是<strong>清楚區分「前人的基礎」與「本專案的貢獻」</strong>。任何專案審查都會問到這一點。</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>由誰完成</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>官方核心原始碼與裝置設定</td>
+<td><strong>Nothing 官方</strong>（2026-03 起釋出並持續更新）</td>
+</tr>
+<tr>
+<td>Device Tree（裝置設定）主體</td>
+<td><strong>社群開發者</strong>（<code>AmphibianArcade</code>，主體約 131 次提交）；本專案<strong>取用</strong>，非自行開發</td>
+</tr>
+<tr>
+<td>Device Tree 最初建立</td>
+<td>社群開發者 Alexander Koskovich（2026-05-07）</td>
+</tr>
+<tr>
+<td><strong>TWRP 復原模式</strong></td>
+<td><strong>第三方開發者 newqiyton</strong>（<code>twrp_device_nothing_froggerPro</code>）；本專案<strong>僅使用</strong>，非自行開發</td>
+</tr>
+<tr>
+<td>原廠驅動檔案（Vendor Blobs）</td>
+<td><strong>取自原廠 ROM</strong>，由本專案提取與配置</td>
+</tr>
+<tr>
+<td>第 1~4 期：環境建置、核心編譯除錯、變磚救援、刷機流程、標頭檔追查</td>
+<td><strong>本專案</strong>（跨兩台開發機完成，過程中另有開發助理協助）</td>
+</tr>
+<tr>
+<td>第 5~8 期：分區實驗、開機、簽章、線上更新、硬體打通、隱私強化</td>
+<td><strong>本專案</strong></td>
+</tr>
+<tr>
+<td>隱私 App、SELinux 政策、建置工具鏈</td>
+<td><strong>本專案</strong></td>
+</tr>
+<tr>
+<td>核心原始碼改動</td>
+<td>本專案僅 <strong>1 次提交</strong>（建置穩健性修正）</td>
+</tr>
+</tbody>
+</table>
+<p><strong>⚠️ 本專案不可主張的事項</strong>：
+- 「從零建立 Device Tree／移植整套系統」（裝置設定主體來自社群）
+- 「自行開發 TWRP／復原模式」（為第三方專案，僅使用）
+- 「網路上沒有任何可參考的資料」（原廠核心原始碼已完整公開）
+- 「原廠未釋出核心原始碼」（已釋出並更新至 2026-09）
+- 「一次就成功」（實際經歷 <strong>2 次變磚</strong>、<strong>至少 11 個建置錯誤</strong>、<strong>1 次 14 小時白費</strong>、<strong>1 次近一週的標頭檔追查</strong>）</p>
+<hr />
+<h1 id="7">7. 待補與未證實事項（誠實標記）</h1>
+<ul>
+<li>部分早期日期係由檔案時間戳推定，非原始紀錄明載</li>
+<li>2026-08-19 ~ 09-08 為停滯期，無紀錄</li>
+<li>第 5 期（09-21 ~ 09-28）細節散落在數百個實驗輸出檔中，本文件僅摘要</li>
+<li>實機目前<strong>未連接</strong>（裝置查詢無輸出）；最新的隱私版<strong>尚未刷入實機驗證</strong></li>
+<li>部分安全政策成效數據來自單次刷機後的單次取樣，未做多次重複量測</li>
+<li>「8 小時 46 分」與「14 小時」為當時紀錄所載，未經本文件重新量測</li>
+<li><strong>交接文件記載「9 月 17 日 <code>make bacon</code> 成功」並列出產物檔名 <code>…20260809…</code>——兩者互相矛盾</strong>（檔名日期為建置日，應為 8 月 9 日）。原始產物已刪除，無法釐清；本文件以實際建置紀錄（8/9、8/13、9/20、9/21）為準</li>
+<li>兩次變磚事件是否為同一事件的先後階段，紀錄上無法確認</li>
+</ul>
+<hr />
+<h1 id="_1">附錄：證據索引</h1>
+<table>
+<thead>
+<tr>
+<th>證據</th>
+<th>規模</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>※ 以下紀錄檔為本專案開發時於本機保存，未隨本文件公開。如需查證，可於必要時提供。</td>
+<td></td>
+</tr>
+<tr>
+<td>開發變更紀錄（現行）</td>
+<td><code>FroggerPro_CHANGELOG.md</code>（現行檔）（<strong>7,448 行 / 136 節</strong>）</td>
+</tr>
+<tr>
+<td>開發變更紀錄（封存，2026-09-21 ~ 10-01）</td>
+<td><code>FroggerPro_CHANGELOG_ARCHIVE.md</code>（封存檔）（<strong>6,565 行 / 155 節</strong>）</td>
+</tr>
+<tr>
+<td>前一階段交接文件</td>
+<td><code>DEVELOPMENT_HANDOFF_FroggerPro.md</code>（394 行，2026-09-21）</td>
+</tr>
+<tr>
+<td><strong>前一任開發助理的完整對話紀錄</strong></td>
+<td><code>froggerpro_full_session.txt</code>（<strong>1,281,505 bytes</strong>，涵蓋 2026-09-09 ~ 09-21）</td>
+</tr>
+<tr>
+<td>開發存檔包</td>
+<td><code>froggerpro_dev_archive.zip</code>（100,213,198 bytes，<strong>560 個檔案</strong>，2026-09-21 建立）</td>
+</tr>
+<tr>
+<td>離線除錯手冊（11 個錯誤）</td>
+<td>存檔包內 <code>temp/froggerpro_offline_guide.txt</code>（21,458 bytes，2026-07-26）</td>
+</tr>
+<tr>
+<td>建置狀態紀錄</td>
+<td>存檔包內 <code>temp/froggerpro_build_status.md</code>（07-16）、<code>build_state_FroggerPro.md</code>（07-19）</td>
+</tr>
+<tr>
+<td>政策失敗分析</td>
+<td>存檔包內 <code>temp/froggerpro_v3_analysis.md</code>（07-20）</td>
+</tr>
+<tr>
+<td>核心編譯紀錄</td>
+<td>存檔包內 <code>temp/froggerpro_build_record.txt</code>、<code>build_result_FroggerPro.txt</code>（07-26）</td>
+</tr>
+<tr>
+<td>建置修復指引</td>
+<td>存檔包內 <code>temp/froggerpro_build_fix.txt</code>（07-28）</td>
+</tr>
+<tr>
+<td>EDL 救援調查</td>
+<td>存檔包內 <code>temp/froggerpro_edl_findings.md</code>（08-07）</td>
+</tr>
+<tr>
+<td>變磚救援文件群</td>
+<td>存檔包內 <code>temp/froggerpro_fix_boot_loop.txt</code>、<code>fix_stock_recovery.txt</code>、<code>flash_all_firmware.txt</code>、<code>force_slot_a.txt</code>、<code>final_fastboot.txt</code>、<code>enter_edl.txt</code>、<code>antirollback_check.txt</code>、<code>edl_keycombo.txt</code>（08-25）</td>
+</tr>
+<tr>
+<td>建置標準流程</td>
+<td>存檔包內 <code>temp/froggerpro_build_sop.md</code>（17,461 bytes，08-26）</td>
+</tr>
+<tr>
+<td>分區實驗輸出</td>
+<td><code>pm/</code>（數百個檔案，2026-09-21 ~ 09-28）</td>
+</tr>
+<tr>
+<td>早期規劃文件</td>
+<td><code>FroggerPro_LineageOS_Build_Guide.txt</code>（28,340 bytes，07-08）、<code>FroggerPro_LineageOS_Build_Flow.md</code>（43,300 bytes，07-10）</td>
+</tr>
+<tr>
+<td>建置工具鏈</td>
+<td><code>bootrec/</code>（<strong>291 個腳本 / 15,617 行</strong>）</td>
+</tr>
+<tr>
+<td>原廠核心原始碼</td>
+<td>GitHub <code>NothingOSS/android_kernel_msm-6.6_nothing_sm7750</code></td>
+</tr>
+<tr>
+<td>社群 Device Tree</td>
+<td>GitHub <code>AmphibianArcade/android_device_nothing_FroggerPro</code></td>
+</tr>
+<tr>
+<td>TWRP 裝置設定（第三方）</td>
+<td>GitHub <code>newqiyton/twrp_device_nothing_froggerPro</code></td>
+</tr>
+</tbody>
+</table>
+<footer>
+  <p>本頁由 <a href="https://github.com/Yeee3-pei/FroggerPro-LineageOS">GitHub 專案</a> 的 README 自動產生。
+     文件內容為專案開發者自行撰寫，所有數據均來自本機開發紀錄。</p>
+</footer>
+</div>
+</body>
+</html>
