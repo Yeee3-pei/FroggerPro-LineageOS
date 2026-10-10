@@ -610,3 +610,5 @@ LineageOS 必須為每個機型提供專屬的 Device Tree。機型太新或無�
 | 原廠核心原始碼 | GitHub `NothingOSS/android_kernel_msm-6.6_nothing_sm7750` |
 | 社群 Device Tree | GitHub `AmphibianArcade/android_device_nothing_FroggerPro` |
 | TWRP 裝置設定（第三方） | GitHub `newqiyton/twrp_device_nothing_froggerPro` |
+
+部分程式使用 vibe coding，正在修改中
